@@ -24,8 +24,8 @@ White == "White"
 Black == "Black"
 Color == { White, Black }
 
-VARIABLES active, network, counter, color, token, terminationDetected
-vars == <<active, network, counter, color, token, terminationDetected >>
+VARIABLES active, network, counter, color, token
+vars == <<active, network, counter, color, token >>
 
 TypeOK ==
     /\ active \in [ Node -> BOOLEAN ]
@@ -33,9 +33,8 @@ TypeOK ==
     /\ counter \in [ Node -> Int ]
     /\ color \in [ Node -> Color ]
     /\ token \in [ t: Node, color: Color, q: Int ]
-    /\ terminationDetected \in BOOLEAN
 
-terminated ==
+terminationDetected ==
     /\ token["t"] = 0
     /\ active[0] = FALSE
     /\ counter[0] + token["q"] = 0
@@ -48,22 +47,18 @@ Init ==
     /\ counter = [ m \in Node |-> 0 ]
     /\ color = [ m \in Node |-> White ]
     /\ token = [ t |-> 0, color |-> Black, q |-> 0 ]
-    /\ terminationDetected = FALSE
 
 StartProbe ==
     /\ ~terminationDetected
-    /\ ~terminated
     /\ token["t"] = 0
     /\ token' = [ t |-> N - 1, color |-> White, q |-> 0 ]
     /\ color' = [ color EXCEPT ![0] = White ]
-    /\ UNCHANGED << active, network, counter, terminationDetected >>
+    /\ UNCHANGED << active, network, counter >>
 
-EndProbe ==
-    /\ token["t"] = 0
-    /\ terminated
-    /\ ~terminationDetected
-    /\ terminationDetected' = terminated
-    /\ UNCHANGED << active, network, counter, color, token >>
+\* EndProbe ==
+\*     /\ token["t"] = 0
+\*     /\ terminationDetected
+\*     /\ UNCHANGED << active, network, counter, color, token >>
 
 PassToken(n) ==
     /\ active[n] = FALSE
@@ -77,14 +72,14 @@ PassToken(n) ==
             /\ color[n] = White
             /\ token' = [ t |-> n - 1, color |-> token["color"], q |-> token["q"] + counter[n] ]
     /\ color' = [ color EXCEPT ![n] = White ]
-    /\ UNCHANGED << active, network, counter, terminationDetected >>
+    /\ UNCHANGED << active, network, counter >>
 
 SendMsg(snd, rcv) ==
     /\ snd # rcv
     /\ active[snd]
     /\ network' = [ network EXCEPT ![rcv] = @ + 1 ]
     /\ counter' = [ counter EXCEPT ![snd] = @ + 1 ]
-    /\ UNCHANGED << active, color, token, terminationDetected >>
+    /\ UNCHANGED << active, color, token >>
 
 RecvMsg(rcv) ==
     /\ network[rcv] > 0
@@ -92,16 +87,16 @@ RecvMsg(rcv) ==
     /\ network' = [ network EXCEPT ![rcv] = @ - 1 ]
     /\ counter' = [ counter EXCEPT ![rcv] = @ - 1 ]
     /\ color' = [ color EXCEPT ![rcv] = Black ]
-    /\ UNCHANGED << token, terminationDetected >>
+    /\ UNCHANGED << token >>
 
 Deactivate(n) ==
     /\ active[n] = TRUE
     /\ active' = [ active EXCEPT ![n] = FALSE]
-    /\ UNCHANGED << network, counter, color, token, terminationDetected >>
+    /\ UNCHANGED << network, counter, color, token >>
 
 Next ==
     \/ StartProbe
-    \/ EndProbe
+    \* \/ EndProbe
     \/ \E n, m \in Node:
         \/ PassToken(n)
         \/ SendMsg(n, m)
@@ -111,19 +106,25 @@ Next ==
 Spec ==
     Init /\ [][Next]_vars /\ WF_vars(Next)
 
-Safety ==
-    [](terminationDetected => []terminated)
+\* Safety ==
+\*     [](terminationDetected => []terminated)
 
-Liveness ==
-    /\ terminated ~> terminationDetected
+\* Liveness ==
+\*     /\ terminated ~> terminationDetected
     
+
+ATD == INSTANCE AsyncTerminationDetection
+    WITH pending <- network
+
+ATDSpec == ATD!Spec
 
 ---------------------------------------------------------------------------
 
 \* Below this line this is just TLC related.
 
 MaxPendingMessages ==
-    \A n \in Node : network[n] < MAX_PENDING_MESSAGES
+    /\ \A n \in Node : network[n] < MAX_PENDING_MESSAGES
+    /\ \A n \in Node : counter[n] < MAX_PENDING_MESSAGES
 =============================================================================
 \* Modification History
 \* Created Sun Jan 10 15:19:20 CET 2021 by Stephan Merz @muenchnerkindl
