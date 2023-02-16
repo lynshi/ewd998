@@ -24,10 +24,11 @@ White == "White"
 Black == "Black"
 Color == { White, Black }
 
-VARIABLES active, network, counter, color, token, terminationDetected
-vars == <<active, network, counter, color, token, terminationDetected>>
+VARIABLES active, network, counter, color, token, terminationDetected, firstProbeStarted
+vars == <<active, network, counter, color, token, terminationDetected, firstProbeStarted>>
 
 terminated ==
+    /\ firstProbeStarted
     /\ token["t"] = 0
     /\ active[0] = FALSE
     /\ counter[0] + token["q"] = 0
@@ -40,7 +41,8 @@ TypeOK ==
     /\ counter \in [ Node -> Int ]
     /\ color \in [ Node -> Color ]
     /\ token \in [ t: Node, color: Color, q: Int ]
-    /\ terminationDetected \in BOOLEAN 
+    /\ terminationDetected \in BOOLEAN
+    /\ firstProbeStarted \in BOOLEAN 
 
 Init ==
     /\ active \in [ Node -> BOOLEAN ]
@@ -48,7 +50,8 @@ Init ==
     /\ counter = [ m \in Node |-> 0 ]
     /\ color = [ m \in Node |-> White ]
     /\ token = [ t |-> 0, color |-> White, q |-> 0 ]
-    /\ terminationDetected \in { FALSE, terminated }
+    /\ terminationDetected = FALSE
+    /\ firstProbeStarted = FALSE
 
 StartProbe ==
     /\ ~terminationDetected
@@ -56,13 +59,14 @@ StartProbe ==
     /\ token["t"] = 0
     /\ token' = [ t |-> N - 1, color |-> White, q |-> 0 ]
     /\ color' = [ color EXCEPT ![0] = White ]
+    /\ firstProbeStarted' = TRUE
     /\ UNCHANGED << active, network, counter, terminationDetected >>
 
 EndProbe ==
     /\ token["t"] = 0
     /\ terminated
     /\ terminationDetected' = terminated
-    /\ UNCHANGED << active, network, counter, color, token >>
+    /\ UNCHANGED << active, network, counter, color, token, firstProbeStarted >>
 
 PassToken(n) ==
     /\ active[n] = FALSE
@@ -76,14 +80,14 @@ PassToken(n) ==
             /\ color[n] = White
             /\ token' = [ t |-> n - 1, color |-> token["color"], q |-> token["q"] + counter[n] ]
     /\ color' = [ color EXCEPT ![n] = White ]
-    /\ UNCHANGED << active, network, counter, terminationDetected >>
+    /\ UNCHANGED << active, network, counter, terminationDetected, firstProbeStarted >>
 
 SendMsg(snd, rcv) ==
     /\ snd # rcv
     /\ active[snd]
     /\ network' = [ network EXCEPT ![rcv] = @ + 1 ]
     /\ counter' = [ counter EXCEPT ![snd] = @ + 1 ]
-    /\ UNCHANGED << active, color, token, terminationDetected >>
+    /\ UNCHANGED << active, color, token, terminationDetected, firstProbeStarted >>
 
 RecvMsg(rcv) ==
     /\ network[rcv] > 0
@@ -91,12 +95,12 @@ RecvMsg(rcv) ==
     /\ network' = [ network EXCEPT ![rcv] = @ - 1 ]
     /\ counter' = [ counter EXCEPT ![rcv] = @ - 1 ]
     /\ color' = [ color EXCEPT ![rcv] = Black ]
-    /\ UNCHANGED << token, terminationDetected >>
+    /\ UNCHANGED << token, terminationDetected, firstProbeStarted >>
 
 Deactivate(n) ==
     /\ active[n] = TRUE
     /\ active' = [ active EXCEPT ![n] = FALSE]
-    /\ UNCHANGED << network, counter, color, token, terminationDetected >>
+    /\ UNCHANGED << network, counter, color, token, terminationDetected, firstProbeStarted >>
 
 Next ==
     \/ StartProbe
@@ -114,7 +118,8 @@ Safety ==
     [](terminationDetected => []terminated)
 
 Liveness ==
-    terminated ~> terminationDetected
+    /\ terminated ~> terminationDetected
+    /\ <>firstProbeStarted
     
 
 ---------------------------------------------------------------------------
