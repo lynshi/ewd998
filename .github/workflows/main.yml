@@ -9,6 +9,22 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    # Do not download and install TLAPS over and over again.
+    - uses: actions/cache@v1
+      id: cache
+      with:
+        path: tlaps/
+        key: tlaps1.4.5
+    - name: Get TLAPS
+      if: steps.cache.outputs.cache-hit != 'true' # see actions/cache above
+      run: wget https://github.com/tlaplus/tlapm/releases/download/v1.4.5/tlaps-1.4.5-x86_64-linux-gnu-inst.bin
+    - name: Install TLAPS
+      if: steps.cache.outputs.cache-hit != 'true' # see actions/cache above
+      run: |
+        chmod +x tlaps-1.4.5-x86_64-linux-gnu-inst.bin
+        ./tlaps-1.4.5-x86_64-linux-gnu-inst.bin -d tlaps
+    - name: Run TLAPS
+      run: tlaps/bin/tlapm --cleanfp -I tlaps/ O.tla AsyncTerminationDetection_proof.tla
     - name: Get (nightly) TLC
       run: wget https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
     - name: Run TLC
@@ -16,4 +32,15 @@ jobs:
         java -Dtlc2.TLC.stopAfter=1800 -Dtlc2.TLC.ide=Github
         -Dutil.ExecutionStatisticsCollector.id=aabbcc60f238424fa70d124d0c77bbf1
         -cp tla2tools.jar tlc2.TLC -workers auto -lncheck final -checkpoint 60
-        -coverage 60 -tool -deadlock AsyncTerminationDetection
+        -coverage 60 -tool -deadlock MCAsyncTerminationDetection
+    - name: Get (nightly) Apalache
+      run: wget https://github.com/informalsystems/apalache/releases/latest/download/apalache.tgz
+    - name: Install Apalache
+      run: |
+        tar xvfz apalache.tgz
+    - name: Run Apalache
+      run: |
+        apalache/bin/apalache-mc check --config=APAsyncTerminationDetection.cfg --length=1 --inv=StableInv --init=Init AsyncTerminationDetection_apalache.tla
+        apalache/bin/apalache-mc check --config=APAsyncTerminationDetection.cfg --length=2 --init=StableInv --inv=StableInv AsyncTerminationDetection_apalache.tla
+        apalache/bin/apalache-mc check --config=APAsyncTerminationDetection.cfg --length=2 --init=StableInv --inv=StableActionInv AsyncTerminationDetection_apalache.tla
+        apalache/bin/apalache-mc check --features=no-rows --config=APEWD998.cfg --length=2 --init=IInvA --next=Next --inv=InvA APEWD998.tla

@@ -331,7 +331,6 @@ Spec ==
     \* TODO Convince yourself that  AsyncTerminationDetection  is still correct
      \* TODO and  EWD998  passes, i.e., rerun TLC.
     Init /\ [][Next]_vars /\ WF_vars(DetectTermination) (*  F  *)
-    \* Init /\ [][Next]_vars
 
 Terminates ==
     \* * The behavior spec  Spec  asserts that every step/transition is a  Next  step, or
