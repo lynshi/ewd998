@@ -46,6 +46,8 @@ Init ==
     /\ network = [ m \in Node |-> 0 ]
     /\ counter = [ m \in Node |-> 0 ]
     /\ color = [ m \in Node |-> White ]
+    \* Start the token black so that the invariant is not violated by the initial state
+    \* If we initialize the token to White, it may appear that termination is detected before the probe even starts!
     /\ token = [ t |-> 0, color |-> Black, q |-> 0 ]
 
 StartProbe ==
