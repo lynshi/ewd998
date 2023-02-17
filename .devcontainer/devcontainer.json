@@ -25,4 +25,14 @@
     },
 
   "onCreateCommand": "bash -i .devcontainer/install.sh",
+
+  "customizations": {
+    "codespaces": {
+      "repositories": {
+        "lynshi/ewd998": {
+          "permissions": "write-all"
+        }
+      }
+    }
+  }
 }
