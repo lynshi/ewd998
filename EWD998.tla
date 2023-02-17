@@ -118,6 +118,27 @@ ATD == INSTANCE AsyncTerminationDetection
 
 ATDSpec == ATD!Spec
 
+
+Sum(f, from, to) ==
+    LET sum[ n \in from..to ] ==
+        IF n = from THEN f[from]
+        ELSE f[n] + sum[n - 1]
+    IN sum[to]
+    
+
+IInv == 
+    /\ Sum(network, 0, N - 1) = Sum(counter, 0, N - 1)
+    /\
+        \/
+            /\ ~\E i \in Node: token.t < i /\ active[i] = TRUE
+            /\ IF token.t # N - 1 THEN Sum(counter, token.t + 1, N - 1) = token.q ELSE token.q = 0
+        \/ Sum(counter, 0, token.t) + token.q > 0
+        \/ \E i \in Node: 0 \leq i /\ i \leq token.t /\ color[i] = Black
+        \/ token.color = Black
+
+\* IInvSpec ==
+\*     IInv /\ [][Next]_vars => IInv'
+
 ---------------------------------------------------------------------------
 
 \* Below this line this is just TLC related.
